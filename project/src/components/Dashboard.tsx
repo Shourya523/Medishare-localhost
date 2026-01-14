@@ -1,7 +1,9 @@
 import React from 'react';
 import { Package, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import RegisterNewMedicine from './RegisterNewMedicine'; // Import the new component
 
 export default function Dashboard() {
+  // Mock data for the donation dashboard
   const donations = [
     {
       id: '1',
@@ -19,19 +21,33 @@ export default function Dashboard() {
       ngo: 'Medical Aid Society',
       date: '2024-03-14',
     },
+    {
+      id: '3',
+      medicine: 'Ibuprofen 400mg',
+      quantity: 50,
+      status: 'in-transit',
+      ngo: 'Global Relief',
+      date: '2024-03-16',
+    },
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="dashboard">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      
+      {/* --- ADDED: Register New Medicine Component --- */}
+      {/* This sits at the top of the Dashboard, right after HealthInsights (in App structure) */}
+      <RegisterNewMedicine />
+      {/* ---------------------------------------------- */}
+
+      <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Donation Dashboard</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-emerald-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600">Total Donations</p>
-                <p className="text-2xl font-bold text-emerald-900">35</p>
+                <p className="text-sm text-emerald-600 font-medium">Total Donations</p>
+                <p className="text-2xl font-bold text-emerald-700">1,234</p>
               </div>
               <Package className="h-8 w-8 text-emerald-500" />
             </div>
@@ -40,30 +56,30 @@ export default function Dashboard() {
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600">Completed</p>
-                <p className="text-2xl font-bold text-blue-900">28</p>
+                <p className="text-sm text-blue-600 font-medium">Active Requests</p>
+                <p className="text-2xl font-bold text-blue-700">56</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-yellow-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-900">7</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
+              <Clock className="h-8 w-8 text-blue-500" />
             </div>
           </div>
 
           <div className="bg-purple-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600">Impact Score</p>
-                <p className="text-2xl font-bold text-purple-900">92</p>
+                <p className="text-sm text-purple-600 font-medium">Completed</p>
+                <p className="text-2xl font-bold text-purple-700">1,178</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-500" />
+              <CheckCircle className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
+
+          <div className="bg-orange-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-600 font-medium">Growth</p>
+                <p className="text-2xl font-bold text-orange-700">+12.5%</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-orange-500" />
             </div>
           </div>
         </div>
@@ -106,6 +122,8 @@ export default function Dashboard() {
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         donation.status === 'completed'
                           ? 'bg-green-100 text-green-800'
+                          : donation.status === 'in-transit'
+                          ? 'bg-blue-100 text-blue-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >

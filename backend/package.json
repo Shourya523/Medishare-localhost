@@ -32,7 +32,8 @@
     "nodemailer": "^6.9.16",
     "path": "^0.12.7",
     "pdf-parse": "^1.1.1",
-    "pdf2pic": "^3.2.0"
+    "pdf2pic": "^3.2.0",
+    "qrcode.react": "^4.2.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
