@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package, CheckCircle, Clock, TrendingUp } from 'lucide-react';
-import RegisterNewMedicine from './RegisterNewMedicine'; // Import the new component
+import RegisterNewMedicine from './RegisterNewMedicine'; 
 
 export default function Dashboard() {
   // Mock data for the donation dashboard
@@ -33,9 +33,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="dashboard">
-      
-      {/* --- ADDED: Register New Medicine Component --- */}
-      {/* This sits at the top of the Dashboard, right after HealthInsights (in App structure) */}
+
       <RegisterNewMedicine />
       {/* ---------------------------------------------- */}
 
