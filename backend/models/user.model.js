@@ -43,7 +43,7 @@ UserSchema.methods.comparePassword = async function (password) {
 
 UserSchema.methods.generateJWT = async function () {
   return jwt.sign({ id: this._id, email: this.email, name: this.name , role: this.role }, process.env.JWT_SECRET, {
-    expiresIn: '1h',
+    expiresIn: '10h',
   });
 };
 export const User = mongoose.model('User', UserSchema);

@@ -8,13 +8,14 @@ import {
   resetForm
 } from '../store/slices/uploadSlice';
 import axiosInstance from '../config/axios.config';
-import { CheckCircle, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; 
+import { CheckCircle, AlertCircle, ShieldCheck, Box, Calendar, Factory, Zap, ScanLine } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Scanner() {
   const dispatch = useDispatch();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
+  // Logic from Code 1: Comprehensive State Management
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [batchNumber, setBatchNumber] = useState<string | null>(null);
   const [medicineName, setMedicineNameState] = useState<string | null>(null);
@@ -30,9 +31,9 @@ export default function Scanner() {
   const [donationStatus, setDonationStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Logic from Code 1: Robust Parsing & Scanner Control
   const startScanner = () => {
     console.log("Starting QR Scanner...");
-
     const newScanner = new Html5QrcodeScanner(
       'qr-reader',
       { fps: 10, qrbox: 250 },
@@ -46,26 +47,24 @@ export default function Scanner() {
           const formattedJson = decodedText.replace(/'/g, '"');
           const rawData = JSON.parse(formattedJson);
 
-          console.log('📌 Parsed QR Data:', rawData);
-          
           const parsedData = {
-              medicineName: rawData.mn || rawData.medicineName || '',
-              batchNumber: rawData.bn || rawData.batchNumber || '',
-              brand: rawData.br || rawData.brand || '',
-              manufacturerDetails: rawData.md || rawData.manufacturerDetails || '',
-              manufacturer: rawData.m || rawData.manufacturer || '',
-              quantity: rawData.q || rawData.quantity || 1,
-              expiryDate: rawData.ed || rawData.expiryDate || '',
+            medicineName: rawData.mn || rawData.medicineName || '',
+            batchNumber: rawData.bn || rawData.batchNumber || '',
+            brand: rawData.br || rawData.brand || '',
+            manufacturerDetails: rawData.md || rawData.manufacturerDetails || '',
+            manufacturer: rawData.m || rawData.manufacturer || '',
+            quantity: rawData.q || rawData.quantity || 1,
+            expiryDate: rawData.ed || rawData.expiryDate || '',
           };
 
-          const formattedExpiryDate = parsedData.expiryDate
-            ? parsedData.expiryDate.split('T')[0]
-            : '';
+          const formattedExpiryDate = parsedData.expiryDate ? parsedData.expiryDate.split('T')[0] : '';
 
+          // Update Redux
           dispatch(setMedicineName(parsedData.medicineName));
           dispatch(setExpiryDate(formattedExpiryDate));
           dispatch(setQuantity(Number(parsedData.quantity) || 1));
-          
+
+          // Update Local State
           setBatchNumber(parsedData.batchNumber);
           setMedicineNameState(parsedData.medicineName);
           setBrand(parsedData.brand);
@@ -73,7 +72,7 @@ export default function Scanner() {
           setManufacturer(parsedData.manufacturer);
           setQuantityState(Number(parsedData.quantity) || 1);
           setExpiryDateState(formattedExpiryDate);
-          
+
           setScanResult(decodedText);
           newScanner.clear();
           setIsScanning(false);
@@ -81,11 +80,18 @@ export default function Scanner() {
           console.error('❌ Error parsing QR code data:', error);
         }
       },
-      (errorMessage) => {}
+      (errorMessage) => { /* Silent error for frame mismatches */ }
     );
 
     setScanner(newScanner);
     setIsScanning(true);
+  };
+
+  const stopScanner = () => {
+    if (scanner) {
+      scanner.clear();
+      setIsScanning(false);
+    }
   };
 
   const verifyBatch = async () => {
@@ -100,8 +106,6 @@ export default function Scanner() {
 
     try {
       const response = await axiosInstance.get(`/chain/api/verify/${batchNumber}`);
-      console.log('Verification response:', response.data);
-
       const batchDetails = response.data.batchDetails;
 
       if (batchDetails) {
@@ -109,15 +113,12 @@ export default function Scanner() {
         if (batchDetails.isVerified) {
           setVerificationStatus('Medicine is blockchain verified');
         } else if (batchDetails.isValid) {
-          setVerificationStatus('Medicine is valid but not blockchain verified');
+          setVerificationStatus('Medicine is valid (Manual Check)');
         } else {
           setVerificationStatus('Medicine validation failed');
         }
-      } else {
-        setVerificationStatus('Could not retrieve batch details');
       }
     } catch (error) {
-      console.error('Error verifying batch:', error);
       setVerificationStatus('Verification failed. Server error.');
     } finally {
       setIsLoading(false);
@@ -135,34 +136,22 @@ export default function Scanner() {
 
     try {
       const donationData = {
-        batchNumber: batchNumber,
-        medicineName: medicineName,
-        brand: brand,
-        expiryDate: expiryDate,
-        manufacturerDetails: manufacturerDetails,
-        manufacturer: manufacturer,
-        quantity: quantity
+        batchNumber,
+        medicineName,
+        brand,
+        expiryDate,
+        manufacturerDetails,
+        manufacturer,
+        quantity
       };
 
-      console.log('Sending donation data:', donationData);
-      
-      const response = await axiosInstance.post(
-        '/users/donation/',
-        donationData
-      );
-
-      console.log('Donation response:', response.data);
+      await axiosInstance.post('/users/donation/', donationData);
       setDonationStatus('Donation successful!');
       dispatch(resetForm());
-      
     } catch (error: any) {
-      console.error('Error donating medicine:', error);
-      
       if (error.response && error.response.status === 401) {
         setDonationStatus('Please Login to Donate');
-        setTimeout(() => {
-            navigate('/login');
-        }, 2000);
+        setTimeout(() => navigate('/login'), 2000);
       } else {
         setDonationStatus('Donation failed. Please try again.');
       }
@@ -171,120 +160,129 @@ export default function Scanner() {
     }
   };
 
-  const stopScanner = () => {
-    if (scanner) {
-      scanner.clear();
-      setIsScanning(false);
-    }
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="donate">
-      <div className="bg-white text-gray-900 rounded-xl shadow-lg p-6">
-        <h2 className="text-3xl font-bold mb-6 text-center text-emerald-600">Scan Medicine QR Code</h2>
-
-        <div id="qr-reader" className="mb-6 border-2 border-gray-300 rounded-lg p-4 bg-gray-100"></div>
-
-        <div className="flex justify-center">
-          <button
-            onClick={isScanning ? stopScanner : startScanner}
-            className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition"
-            disabled={isLoading}
-          >
-            {isScanning ? 'Stop Scanning' : 'Start Scan'}
-          </button>
+    <div className="h-auto bg-transparent py-12 px-4 sm:px-6 lg:px-8 font-sans scroll-mt-24" id="donate">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-4xl font-bold tracking-tight text-gray-900">Verify & Donate.</h2>
+          <p className="mt-2 text-gray-500 font-medium">Apple-grade security for your medical contributions</p>
         </div>
 
-        {scanResult && (
-          <div className="mt-6">
-            <h3 className="text-xl font-bold mb-4 text-emerald-600">Scanned Medicine Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Scanner Viewport */}
+          <div className="md:col-span-2 bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 shadow-sm border border-white/20 flex flex-col items-center justify-center transition-all">
+            <div id="qr-reader" className="w-full max-w-md overflow-hidden rounded-3xl border-0 bg-gray-50/50 mb-8"></div>
+            
+            <button
+              onClick={isScanning ? stopScanner : startScanner}
+              className={`group relative flex items-center gap-3 px-10 py-4 rounded-full font-bold transition-all duration-300 ${
+                isScanning 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200'
+              }`}
+            >
+              {isScanning ? <ScanLine className="h-5 w-5 animate-pulse" /> : <Zap className="h-5 w-5 fill-current" />}
+              {isScanning ? 'Stop Scanner' : 'Activate Camera'}
+            </button>
+          </div>
 
-            {verificationDetails && verificationDetails.isVerified && (
-              <div className="mb-4 flex items-center bg-green-100 p-3 rounded-lg">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
-                  <CheckCircle className="h-4 w-4 text-white" />
+          {/* Security Status Card */}
+          <div className={`rounded-[2.5rem] p-8 flex flex-col justify-between transition-all duration-500 border shadow-sm ${
+            verificationDetails?.isVerified 
+            ? 'bg-emerald-500 border-emerald-400 text-white' 
+            : 'bg-white/70 backdrop-blur-md border-white/20 text-gray-900'
+          }`}>
+            <div>
+              <ShieldCheck className={`h-12 w-12 mb-6 ${verificationDetails?.isVerified ? 'text-emerald-100' : 'text-emerald-500'}`} />
+              <h3 className="text-2xl font-bold mb-2 tracking-tight">Security Check</h3>
+              <p className={`font-medium ${verificationDetails?.isVerified ? 'text-emerald-50' : 'text-gray-500'}`}>
+                {verificationStatus || 'Awaiting scan to initiate blockchain validation.'}
+              </p>
+            </div>
+            
+            {verificationDetails && (
+              <div className={`mt-6 p-4 rounded-2xl backdrop-blur-md ${verificationDetails?.isVerified ? 'bg-white/10' : 'bg-gray-50/50'}`}>
+                <div className="flex justify-between text-sm mb-1">
+                   <span className="opacity-70 font-medium">Batch ID</span>
+                   <span className="font-bold">#{batchNumber?.slice(-6)}</span>
                 </div>
-                <span className="font-bold text-green-800">Blockchain Verified</span>
+                <div className="flex justify-between text-sm">
+                   <span className="opacity-70 font-medium">Authenticated</span>
+                   <span className="font-bold">{verificationDetails.isVerified ? 'Yes' : 'Pending'}</span>
+                </div>
               </div>
             )}
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-gray-700 font-bold">Batch Number:</label>
-                <input type="text" value={batchNumber || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
+          {/* Scanned Data Bento Grid */}
+          {scanResult && (
+            <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="md:col-span-2 bg-white/70 backdrop-blur-md rounded-[2rem] p-6 border border-white/20 flex items-center gap-5">
+                <div className="h-14 w-14 bg-emerald-50/50 rounded-2xl flex items-center justify-center text-emerald-600">
+                  <Box className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Medicine</p>
+                  <p className="text-xl font-bold text-gray-900">{medicineName || 'Unknown'}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Medicine Name:</label>
-                <input type="text" value={medicineName || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
+
+              <div className="bg-white/70 backdrop-blur-md rounded-[2rem] p-6 border border-white/20 flex flex-col justify-between">
+                <Calendar className="h-6 w-6 text-orange-500 mb-2" />
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Expires</p>
+                  <p className="text-lg font-bold">{expiryDate || '--/--/--'}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Brand:</label>
-                <input type="text" value={brand || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Manufacturer Details:</label>
-                <input type="text" value={manufacturerDetails || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Manufacturer ID:</label>
-                <input type="text" value={manufacturer || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Quantity:</label>
+
+              <div className="bg-white/70 backdrop-blur-md rounded-[2rem] p-6 border border-white/20">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Quantity</p>
                 <input
                   type="number"
-                  value={quantity || 1}
+                  value={quantity}
                   onChange={(e) => setQuantityState(parseInt(e.target.value) || 1)}
-                  className="w-full border p-2 rounded"
+                  className="text-2xl font-bold text-emerald-600 bg-transparent w-full outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-gray-700 font-bold">Expiry Date:</label>
-                <input type="text" value={expiryDate || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
+
+              <div className="md:col-span-2 bg-white/70 backdrop-blur-md rounded-[2rem] p-6 border border-white/20 flex items-center gap-5">
+                <div className="h-12 w-12 bg-blue-50/50 rounded-xl flex items-center justify-center text-blue-600">
+                  <Factory className="h-6 w-6" />
+                </div>
+                <div className="truncate">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Manufacturer</p>
+                  <p className="text-lg font-bold truncate">{brand || manufacturerDetails || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                <button
+                  onClick={verifyBatch}
+                  disabled={isLoading}
+                  className="bg-gray-900 text-white rounded-[1.5rem] font-bold hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isLoading && verificationStatus === 'Verifying...' ? '...' : 'Verify'}
+                </button>
+                <button
+                  onClick={donateMedicine}
+                  disabled={isLoading}
+                  className="bg-emerald-600 text-white rounded-[1.5rem] font-bold hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  Donate Now
+                </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {verificationStatus && (
-          <div className={`mt-4 p-3 rounded ${verificationStatus.includes('verified')
-              ? 'bg-green-100 text-green-800'
-              : verificationStatus.includes('valid')
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
-            {verificationStatus}
-          </div>
-        )}
-
-        {/* --- REMOVED: Blockchain Details Grid --- */}
+          )}
+        </div>
 
         {donationStatus && (
-          <div className={`mt-4 p-3 rounded flex items-center gap-2 ${donationStatus.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-             {donationStatus.includes('Login') && <AlertCircle className="h-4 w-4"/>}
-             {donationStatus}
+          <div className={`mt-8 max-w-md mx-auto p-4 rounded-2xl flex items-center justify-center gap-3 animate-in zoom-in duration-300 ${
+            donationStatus.includes('successful') ? 'bg-emerald-100/80 text-emerald-800' : 'bg-red-100/80 text-red-800'
+          } backdrop-blur-sm border border-white/20`}>
+            {donationStatus.includes('Login') ? <AlertCircle className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
+            <span className="font-bold">{donationStatus}</span>
           </div>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <button
-            type="button"
-            onClick={verifyBatch}
-            disabled={!scanResult || isLoading}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300"
-          >
-            {isLoading && verificationStatus === 'Verifying...' ? 'Verifying...' : 'Verify Batch'}
-          </button>
-
-          <button
-            type="button"
-            onClick={donateMedicine}
-            disabled={!scanResult || isLoading}
-            className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition disabled:bg-purple-300"
-          >
-            {isLoading && donationStatus === 'Processing donation...' ? 'Donating...' : 'Donate Medicine'}
-          </button>
-        </div>
       </div>
     </div>
   );
