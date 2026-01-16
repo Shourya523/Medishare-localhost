@@ -10,8 +10,8 @@ export interface MedicineData {
   batchNumber: string;
   medicineName: string;
   brand: string;
-  manufacturerDetails: string; // Physical address/details
-  manufacturer: string;        // Blockchain Address / ID
+  manufacturerDetails: string;
+  manufacturer: string; 
   quantity: string;
   expiryDate: string;
   registeredAt: string;
@@ -25,7 +25,7 @@ const RegisterNewMedicine = () => {
     medicineName: '',
     brand: '',
     manufacturerDetails: '',
-    manufacturer: '', // Added this field
+    manufacturer: '', // Manual input now
     quantity: '',
     expiryDate: '',
   });
@@ -47,6 +47,8 @@ const RegisterNewMedicine = () => {
        setMessage({ type: 'error', text: "Please enter a valid Admin Email or unique ID." });
        return false;
     }
+    
+    // Check all fields
     for (const key in formData) {
       if (formData[key as keyof typeof formData] === '') {
         setMessage({ type: 'error', text: "All fields are required." });
@@ -62,7 +64,6 @@ const RegisterNewMedicine = () => {
 
     if (!validateForm()) return;
 
-    // Simulate generating the full data packet
     const newMedicineData: MedicineData = {
       ...formData,
       medicineId: uuidv4(),
@@ -110,9 +111,26 @@ const RegisterNewMedicine = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Admin ID / Email</label>
-            <input type="text" name="adminId" value={formData.adminId} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@example.com" required />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Admin ID / Email</label>
+                <input type="text" name="adminId" value={formData.adminId} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@example.com" required />
+             </div>
+             {/* REVERTED: Manual Input for Manufacturer ID */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <Wallet size={14} /> Manufacturer Blockchain ID
+                </label>
+                <input 
+                    type="text" 
+                    name="manufacturer" 
+                    value={formData.manufacturer} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="0x..." 
+                    required
+                />
+             </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -142,14 +160,6 @@ const RegisterNewMedicine = () => {
              </div>
            </div>
 
-          {/* ADDED: Manufacturer ID Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Wallet size={14} /> Manufacturer Blockchain ID / Address
-            </label>
-            <input type="text" name="manufacturer" value={formData.manufacturer} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" placeholder="0x..." required />
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer Details (Physical)</label>
             <textarea name="manufacturerDetails" value={formData.manufacturerDetails} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Address, Contact info..." required></textarea>
@@ -168,8 +178,8 @@ const RegisterNewMedicine = () => {
               <div className="bg-white p-4 rounded-xl shadow-sm inline-block" ref={qrRef}>
                 <QRCodeCanvas
                   value={qrCodeStringData}
-                  size={200}
-                  level={"H"}
+                  size={400} 
+                  level={"M"} 
                   includeMargin={true}
                 />
               </div>
