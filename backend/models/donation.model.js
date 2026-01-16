@@ -9,9 +9,10 @@ const donationSchema = new mongoose.Schema({
     adminResponse: { type: String },
     createdAt: { type: Date, default: Date.now },
     batchNumber : { type : String , required:true},
-    manufacturerDetails : {type: String}
+    manufacturerDetails : {type: String},
+    // --- ADD THESE TWO LINES ---
+    expiryDate: { type: String }, 
+    brand: { type: String }
 });
-  
 
 export const Donation = mongoose.model('Donation', donationSchema);
-  
