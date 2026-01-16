@@ -99,7 +99,6 @@ export default function Scanner() {
     setVerificationDetails(null);
 
     try {
-      // Use relative path so axiosInstance handles the Base URL
       const response = await axiosInstance.get(`/chain/api/verify/${batchNumber}`);
       console.log('Verification response:', response.data);
 
@@ -258,32 +257,7 @@ export default function Scanner() {
           </div>
         )}
 
-        {/* --- RESTORED: Blockchain Details Grid --- */}
-        {verificationDetails && (
-          <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h4 className="font-bold text-gray-700 mb-2">Blockchain Verification Details</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="font-medium">Valid:</div>
-              <div>{verificationDetails.isValid ? 'Yes' : 'No'}</div>
-
-              <div className="font-medium">Verified:</div>
-              <div>{verificationDetails.isVerified ? 'Yes' : 'No'}</div>
-
-              <div className="font-medium">Authenticated:</div>
-              <div>{verificationDetails.isAuthenticated ? 'Yes' : 'No'}</div>
-              
-              <div className="font-medium">Active:</div>
-              <div>{verificationDetails.isActive ? 'Yes' : 'No'}</div>
-
-              <div className="font-medium">NFT Valid:</div>
-              <div>{verificationDetails.isNFTValid ? 'Yes' : 'No'}</div>
-
-               <div className="font-medium">Token ID:</div>
-              <div>{verificationDetails.tokenId || 'N/A'}</div>
-            </div>
-          </div>
-        )}
-        {/* ----------------------------------------- */}
+        {/* --- REMOVED: Blockchain Details Grid --- */}
 
         {donationStatus && (
           <div className={`mt-4 p-3 rounded flex items-center gap-2 ${donationStatus.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
