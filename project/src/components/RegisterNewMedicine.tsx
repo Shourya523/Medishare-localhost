@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Package, QrCode, Download, AlertCircle, CheckCircle, Wallet } from 'lucide-react';
+import { Package, QrCode, Download, AlertCircle, CheckCircle, Wallet, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import axiosInstance from '../config/axios.config'; // Ensure this path matches your project structure
 
 // Define the structure of the medicine data
 export interface MedicineData {
@@ -25,13 +26,15 @@ const RegisterNewMedicine = () => {
     medicineName: '',
     brand: '',
     manufacturerDetails: '',
-    manufacturer: '', // Manual input now
+    manufacturer: '', 
     quantity: '',
     expiryDate: '',
   });
 
   const [generatedData, setGeneratedData] = useState<MedicineData | null>(null);
+  const [qrString, setQrString] = useState<string>(''); 
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -64,14 +67,57 @@ const RegisterNewMedicine = () => {
 
     if (!validateForm()) return;
 
-    const newMedicineData: MedicineData = {
-      ...formData,
-      medicineId: uuidv4(),
-      registeredAt: new Date().toISOString(),
-    };
+    setIsLoading(true);
 
-    setGeneratedData(newMedicineData);
-    setMessage({ type: 'success', text: "Medicine registered successfully! QR Code generated." });
+    try {
+        // 1. First, save to Blockchain/Database
+        // Mapping fields to match what your backend '/chain/api/medicines/add' expects
+        const apiPayload = {
+            batchNumber: formData.batchNumber,
+            name: formData.medicineName, 
+            brand: formData.brand,
+            expiryDate: formData.expiryDate,
+            manufacturerDetails: formData.manufacturerDetails,
+            manufacturer: formData.manufacturer
+        };
+
+        console.log("Saving to blockchain:", apiPayload);
+        
+        await axiosInstance.post('/chain/api/medicines/add', apiPayload);
+
+        // 2. If successful, generate the QR Code logic
+        const newMedicineData: MedicineData = {
+          ...formData,
+          medicineId: uuidv4(),
+          registeredAt: new Date().toISOString(),
+        };
+
+        setGeneratedData(newMedicineData);
+
+        // Compress data for QR Code (Mapping long keys to short keys)
+        const compressedData = {
+          id: newMedicineData.medicineId,
+          aid: newMedicineData.adminId,
+          bn: newMedicineData.batchNumber,
+          mn: newMedicineData.medicineName,
+          br: newMedicineData.brand,
+          md: newMedicineData.manufacturerDetails,
+          m: newMedicineData.manufacturer,
+          q: newMedicineData.quantity,
+          ed: newMedicineData.expiryDate,
+          ts: newMedicineData.registeredAt
+        };
+        
+        setQrString(JSON.stringify(compressedData));
+        setMessage({ type: 'success', text: "Medicine registered on Blockchain & QR Generated!" });
+
+    } catch (error: any) {
+        console.error("Registration failed:", error);
+        const errorMsg = error.response?.data?.error || error.message || "Failed to register medicine on blockchain.";
+        setMessage({ type: 'error', text: errorMsg });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const downloadQR = () => {
@@ -88,8 +134,6 @@ const RegisterNewMedicine = () => {
     }
   };
 
-  const qrCodeStringData = generatedData ? JSON.stringify(generatedData) : '';
-
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
       <div className="flex items-center gap-3 mb-6">
@@ -98,7 +142,7 @@ const RegisterNewMedicine = () => {
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-800">Register New Medicine</h2>
-          <p className="text-sm text-gray-500">Enter details and generate QR for tracking</p>
+          <p className="text-sm text-gray-500">Enter details to save to blockchain and generate QR</p>
         </div>
       </div>
 
@@ -116,7 +160,6 @@ const RegisterNewMedicine = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Admin ID / Email</label>
                 <input type="text" name="adminId" value={formData.adminId} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@example.com" required />
              </div>
-             {/* REVERTED: Manual Input for Manufacturer ID */}
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
                   <Wallet size={14} /> Manufacturer Blockchain ID
@@ -165,9 +208,13 @@ const RegisterNewMedicine = () => {
             <textarea name="manufacturerDetails" value={formData.manufacturerDetails} onChange={handleChange} rows={2} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Address, Contact info..." required></textarea>
           </div>
 
-          <button type="submit" className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            <QrCode className="h-5 w-5" />
-            Register & Generate QR
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full flex items-center justify-center gap-2 text-white px-4 py-2.5 rounded-lg transition-colors font-medium ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+          >
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <QrCode className="h-5 w-5" />}
+            {isLoading ? 'Registering on Blockchain...' : 'Register & Generate QR'}
           </button>
         </form>
 
@@ -177,8 +224,8 @@ const RegisterNewMedicine = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Generated QR Code</h3>
               <div className="bg-white p-4 rounded-xl shadow-sm inline-block" ref={qrRef}>
                 <QRCodeCanvas
-                  value={qrCodeStringData}
-                  size={400} 
+                  value={qrString}
+                  size={300} 
                   level={"M"} 
                   includeMargin={true}
                 />

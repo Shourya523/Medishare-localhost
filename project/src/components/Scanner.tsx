@@ -8,11 +8,12 @@ import {
   resetForm
 } from '../store/slices/uploadSlice';
 import axiosInstance from '../config/axios.config';
-
-
+import { CheckCircle, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; 
 
 export default function Scanner() {
   const dispatch = useDispatch();
+  const navigate = useNavigate(); 
 
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [batchNumber, setBatchNumber] = useState<string | null>(null);
@@ -43,37 +44,44 @@ export default function Scanner() {
         console.log('✅ QR Code Scanned:', decodedText);
         try {
           const formattedJson = decodedText.replace(/'/g, '"');
-          const parsedData = JSON.parse(formattedJson);
+          const rawData = JSON.parse(formattedJson);
 
-          console.log('📌 Parsed QR Data:', parsedData);
+          console.log('📌 Parsed QR Data:', rawData);
+          
+          const parsedData = {
+              medicineName: rawData.mn || rawData.medicineName || '',
+              batchNumber: rawData.bn || rawData.batchNumber || '',
+              brand: rawData.br || rawData.brand || '',
+              manufacturerDetails: rawData.md || rawData.manufacturerDetails || '',
+              manufacturer: rawData.m || rawData.manufacturer || '',
+              quantity: rawData.q || rawData.quantity || 1,
+              expiryDate: rawData.ed || rawData.expiryDate || '',
+          };
 
           const formattedExpiryDate = parsedData.expiryDate
             ? parsedData.expiryDate.split('T')[0]
             : '';
 
-          dispatch(setMedicineName(parsedData.medicineName || ''));
+          dispatch(setMedicineName(parsedData.medicineName));
           dispatch(setExpiryDate(formattedExpiryDate));
-          dispatch(setQuantity(parsedData.quantity || 1));
-          setBatchNumber(parsedData.batchNumber || '');
-          setMedicineNameState(parsedData.medicineName || '');
-          setBrand(parsedData.brand || '');
-          setManufacturerDetails(parsedData.manufacturerDetails || '');
-          setManufacturer(parsedData.manufacturer || '');
-
-
-          setQuantityState(parsedData.quantity || 1);
+          dispatch(setQuantity(Number(parsedData.quantity) || 1));
+          
+          setBatchNumber(parsedData.batchNumber);
+          setMedicineNameState(parsedData.medicineName);
+          setBrand(parsedData.brand);
+          setManufacturerDetails(parsedData.manufacturerDetails);
+          setManufacturer(parsedData.manufacturer);
+          setQuantityState(Number(parsedData.quantity) || 1);
           setExpiryDateState(formattedExpiryDate);
+          
           setScanResult(decodedText);
-
           newScanner.clear();
           setIsScanning(false);
         } catch (error) {
           console.error('❌ Error parsing QR code data:', error);
         }
       },
-      (errorMessage) => {
-        console.warn('⚠️ QR Code Scan Error:', errorMessage);
-      }
+      (errorMessage) => {}
     );
 
     setScanner(newScanner);
@@ -91,14 +99,14 @@ export default function Scanner() {
     setVerificationDetails(null);
 
     try {
-      const response = await axiosInstance.get(`http://localhost:8000/chain/api/verify/${batchNumber}`);
+      // Use relative path so axiosInstance handles the Base URL
+      const response = await axiosInstance.get(`/chain/api/verify/${batchNumber}`);
       console.log('Verification response:', response.data);
 
       const batchDetails = response.data.batchDetails;
 
       if (batchDetails) {
         setVerificationDetails(batchDetails);
-
         if (batchDetails.isVerified) {
           setVerificationStatus('Medicine is blockchain verified');
         } else if (batchDetails.isValid) {
@@ -117,13 +125,11 @@ export default function Scanner() {
     }
   };
 
-
   const donateMedicine = async () => {
     if (!batchNumber) {
       setDonationStatus('Missing required information');
       return;
     }
-
 
     setIsLoading(true);
     setDonationStatus('Processing donation...');
@@ -140,28 +146,27 @@ export default function Scanner() {
       };
 
       console.log('Sending donation data:', donationData);
+      
       const response = await axiosInstance.post(
-        'http://localhost:8000/users/donation/',
+        '/users/donation/',
         donationData
       );
 
       console.log('Donation response:', response.data);
-      setDonationStatus('Donation successful');
+      setDonationStatus('Donation successful!');
       dispatch(resetForm());
-      setScanResult(null);
-      setBatchNumber(null);
-      setMedicineNameState(null);
-      setBrand(null);
-      setManufacturerDetails(null);
-      setManufacturer(null);
-      setQuantityState(1);
-      setExpiryDateState(null);
-      setVerificationDetails(null);
-      setVerificationStatus(null);
-
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Error donating medicine:', error);
-      setDonationStatus('Donation failed. Please try again.');
+      
+      if (error.response && error.response.status === 401) {
+        setDonationStatus('Please Login to Donate');
+        setTimeout(() => {
+            navigate('/login');
+        }, 2000);
+      } else {
+        setDonationStatus('Donation failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -198,9 +203,7 @@ export default function Scanner() {
             {verificationDetails && verificationDetails.isVerified && (
               <div className="mb-4 flex items-center bg-green-100 p-3 rounded-lg">
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <CheckCircle className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-bold text-green-800">Blockchain Verified</span>
               </div>
@@ -209,23 +212,23 @@ export default function Scanner() {
             <div className="space-y-3">
               <div>
                 <label className="block text-gray-700 font-bold">Batch Number:</label>
-                <input type="text" value={batchNumber || ''} readOnly className="w-full border p-2 rounded" />
+                <input type="text" value={batchNumber || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
               <div>
                 <label className="block text-gray-700 font-bold">Medicine Name:</label>
-                <input type="text" value={medicineName || ''} readOnly className="w-full border p-2 rounded" />
+                <input type="text" value={medicineName || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
               <div>
                 <label className="block text-gray-700 font-bold">Brand:</label>
-                <input type="text" value={brand || ''} readOnly className="w-full border p-2 rounded" />
+                <input type="text" value={brand || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
               <div>
                 <label className="block text-gray-700 font-bold">Manufacturer Details:</label>
-                <input type="text" value={manufacturerDetails || ''} readOnly className="w-full border p-2 rounded" />
+                <input type="text" value={manufacturerDetails || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
               <div>
-                <label className="block text-gray-700 font-bold">Manufacturer:</label>
-                <input type="text" value={manufacturer || ''} readOnly className="w-full border p-2 rounded" />
+                <label className="block text-gray-700 font-bold">Manufacturer ID:</label>
+                <input type="text" value={manufacturer || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
               <div>
                 <label className="block text-gray-700 font-bold">Quantity:</label>
@@ -238,14 +241,14 @@ export default function Scanner() {
               </div>
               <div>
                 <label className="block text-gray-700 font-bold">Expiry Date:</label>
-                <input type="text" value={expiryDate || ''} readOnly className="w-full border p-2 rounded" />
+                <input type="text" value={expiryDate || ''} readOnly className="w-full border p-2 rounded bg-gray-50" />
               </div>
             </div>
           </div>
         )}
 
         {verificationStatus && (
-          <div className={`mt-4 p-3 rounded ${verificationStatus.includes('blockchain verified')
+          <div className={`mt-4 p-3 rounded ${verificationStatus.includes('verified')
               ? 'bg-green-100 text-green-800'
               : verificationStatus.includes('valid')
                 ? 'bg-blue-100 text-blue-800'
@@ -255,6 +258,7 @@ export default function Scanner() {
           </div>
         )}
 
+        {/* --- RESTORED: Blockchain Details Grid --- */}
         {verificationDetails && (
           <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h4 className="font-bold text-gray-700 mb-2">Blockchain Verification Details</h4>
@@ -267,22 +271,24 @@ export default function Scanner() {
 
               <div className="font-medium">Authenticated:</div>
               <div>{verificationDetails.isAuthenticated ? 'Yes' : 'No'}</div>
-
+              
               <div className="font-medium">Active:</div>
               <div>{verificationDetails.isActive ? 'Yes' : 'No'}</div>
 
               <div className="font-medium">NFT Valid:</div>
               <div>{verificationDetails.isNFTValid ? 'Yes' : 'No'}</div>
 
-              <div className="font-medium">Token ID:</div>
-              <div>{verificationDetails.tokenId}</div>
+               <div className="font-medium">Token ID:</div>
+              <div>{verificationDetails.tokenId || 'N/A'}</div>
             </div>
           </div>
         )}
+        {/* ----------------------------------------- */}
 
         {donationStatus && (
-          <div className={`mt-4 p-3 rounded ${donationStatus.includes('success') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {donationStatus}
+          <div className={`mt-4 p-3 rounded flex items-center gap-2 ${donationStatus.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+             {donationStatus.includes('Login') && <AlertCircle className="h-4 w-4"/>}
+             {donationStatus}
           </div>
         )}
 
