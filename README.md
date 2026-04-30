@@ -82,9 +82,9 @@ Example: A user asks, “Can I donate expired medicine?” — the chatbot fetch
   - **Smart Contracts**: Developed using Solidity
   - **Development Framework**: Hardhat
   - **API Integration**: Ethers.js
-- **Artificial Intelligence**: Generative AI models for natural language processing and data summarization
+- **Artificial Intelligence**: Gemini 3 flash, Groq
 - **Real-Time Communication**: WebSockets for live data updates
-- **Database**: MongoDB
+- **Database**: MongoDB, Qdrant
 - **Deployment**: Docker and cloud platforms like AWS
 
 ## Architecture
